@@ -4,6 +4,8 @@ llmlite - A lightweight wrapper for LLM API calls
 
 import os
 import json
+import tempfile
+import subprocess
 from typing import Dict, Any, Optional, List, Union
 import openai
 
@@ -12,12 +14,12 @@ class LLM:
     A simple wrapper for making LLM API calls
     """
     
-    def __init__(self, model: str = "gpt-3.5-turbo", api_key: Optional[str] = None):
+    def __init__(self, model: str = "gpt-4o", api_key: Optional[str] = None):
         """
         Initialize the LLM client
         
         Args:
-            model: The model to use for generation
+            model: The model to use for generation (default is now gpt-4o)
             api_key: OpenAI API key (if None, will try to use environment variable)
         """
         self.model = model
@@ -96,4 +98,50 @@ class LLM:
                     return {}
                     
             except Exception:
-                return {} 
+                return {}
+    
+    def text_to_speech(self, text: str, voice: str = "onyx") -> bool:
+        """
+        Convert text to speech using OpenAI's TTS API
+        
+        Args:
+            text: The text to convert to speech
+            voice: The voice to use (default is "onyx")
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Create a temporary file to store the audio
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
+                temp_path = temp_file.name
+            
+            # Generate speech using OpenAI's API
+            response = openai.audio.speech.create(
+                model="tts-1",
+                voice=voice,
+                input=text
+            )
+            
+            # Save the audio to the temporary file
+            response.stream_to_file(temp_path)
+            
+            # Play the audio using the appropriate command based on the OS
+            if os.name == 'nt':  # Windows
+                os.startfile(temp_path)
+            elif os.name == 'posix':  # macOS or Linux
+                if subprocess.call(['which', 'afplay'], stdout=subprocess.DEVNULL) == 0:  # macOS
+                    subprocess.Popen(['afplay', temp_path])
+                elif subprocess.call(['which', 'mpg123'], stdout=subprocess.DEVNULL) == 0:  # Linux with mpg123
+                    subprocess.Popen(['mpg123', temp_path])
+                elif subprocess.call(['which', 'mpg321'], stdout=subprocess.DEVNULL) == 0:  # Linux with mpg321
+                    subprocess.Popen(['mpg321', temp_path])
+                else:
+                    print("Could not find a suitable audio player. Please install mpg123 or mpg321.")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error generating speech: {e}")
+            return False 

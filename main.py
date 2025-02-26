@@ -10,7 +10,7 @@ if not OPENAI_API_KEY:
     raise ValueError("Please set the OPENAI_API_KEY environment variable")
 
 # Initialize LLM client
-llm = llmlite.LLM(model="gpt-3.5-turbo", api_key=OPENAI_API_KEY)
+llm = llmlite.LLM(model="gpt-4o", api_key=OPENAI_API_KEY)
 
 class Game:
     def __init__(self):
@@ -35,7 +35,7 @@ class Game:
         2. conflict: The main conflict or challenge
         3. possible_solutions: At least 3 different ways to resolve the conflict
         4. characters: At least 3 characters with their descriptions, motivations, and how they can help or hinder the player
-        5. failure_cases: At least 2 ways the player might fail
+        5. failure_cases: At least 5 ways the player might fail
         """
         
         story_context = llm.generate_json(prompt)
@@ -175,6 +175,9 @@ class Game:
         - items_lost (optional): List of items the player lost
         - character_encountered (optional): Name of any character encountered
         - character_interaction (optional): Description of the interaction
+        
+        if a character appears, please make sure it was caused by an action. 
+        Make sure all action makes the narrative move forward, make sure there are not circular interactions. 
         """
         
         action_result = llm.generate_json(prompt)
@@ -212,8 +215,10 @@ class Game:
                     self.game_state["characters_met"].append(character)
                     game_utils.slow_print(f"You met: {character}")
             
-            # Display result to player
-            game_utils.slow_print("\n" + action_result["action_result"] + "\n", delay=0.02)
+            # Display and narrate result to player
+            result_text = action_result["action_result"]
+            game_utils.slow_print("\n" + result_text + "\n", delay=0.02)
+            game_utils.narrate(result_text, llm)
             
         else:
             game_utils.slow_print("\nYou tried that, but nothing significant happened.\n")
@@ -225,7 +230,9 @@ class Game:
     def display_game_status(self):
         """Display current game status to the player"""
         print(f"\n--- {self.game_state['current_location']} ---")
-        game_utils.slow_print(self.game_state.get("location_description", ""), delay=0.02)
+        location_desc = self.game_state.get("location_description", "")
+        game_utils.slow_print(location_desc, delay=0.02)
+        game_utils.narrate(location_desc, llm)
         print("\nInventory:", game_utils.format_list(self.game_state["inventory"]))
     
     def save_current_game(self):
@@ -245,6 +252,37 @@ class Game:
         else:
             game_utils.slow_print("No saved game found or error loading game.")
             return False
+    
+    def toggle_narration(self):
+        """Toggle narration on/off"""
+        is_enabled = game_utils.toggle_narration()
+        if is_enabled:
+            game_utils.slow_print("Narration enabled.")
+        else:
+            game_utils.slow_print("Narration disabled.")
+    
+    def change_narration_voice(self):
+        """Change the narration voice"""
+        voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+        print("\nAvailable voices:")
+        for i, voice in enumerate(voices, 1):
+            print(f"{i}. {voice}")
+        
+        try:
+            choice = int(input("\nSelect a voice (1-6): "))
+            if 1 <= choice <= len(voices):
+                voice = voices[choice-1]
+                if game_utils.set_narration_voice(voice):
+                    game_utils.slow_print(f"Voice changed to {voice}.")
+                    # Provide a sample of the new voice
+                    sample_text = f"This is the {voice} voice. How does it sound?"
+                    game_utils.narrate(sample_text, llm)
+                else:
+                    game_utils.slow_print("Failed to change voice.")
+            else:
+                game_utils.slow_print("Invalid choice.")
+        except ValueError:
+            game_utils.slow_print("Please enter a number.")
         
     def run_game(self):
         """Main game loop"""
@@ -258,7 +296,9 @@ class Game:
             if load_choice.startswith('y'):
                 if self.load_saved_game():
                     player = self.game_state["player"]
-                    game_utils.slow_print(f"\nWelcome back, {player['name']}!")
+                    welcome_back = f"\nWelcome back, {player['name']}!"
+                    game_utils.slow_print(welcome_back)
+                    game_utils.narrate(welcome_back, llm)
                     game_utils.slow_print("Your adventure continues...\n")
                 else:
                     self._start_new_game()
@@ -277,16 +317,22 @@ class Game:
             for i, choice in enumerate(choices, 1):
                 print(f"{i}. {choice}")
             print("5. Save game")
+            print("6. Toggle narration")
+            print("7. Change narration voice")
             print("0. Quit game")
             
             # Get player input
             try:
-                choice_num = int(input("\nEnter your choice (0-5): "))
+                choice_num = int(input("\nEnter your choice (0-7): "))
                 if choice_num == 0:
                     game_utils.slow_print("\nThanks for playing!")
                     break
                 elif choice_num == 5:
                     self.save_current_game()
+                elif choice_num == 6:
+                    self.toggle_narration()
+                elif choice_num == 7:
+                    self.change_narration_voice()
                 elif 1 <= choice_num <= len(choices):
                     self.process_player_action(choices[choice_num-1])
                 else:
@@ -302,9 +348,18 @@ class Game:
         
         # Introduction
         player = self.game_state["player"]
-        game_utils.slow_print(f"\nWelcome, {player['name']}!")
-        game_utils.slow_print(f"Background: {player['background']}")
-        game_utils.slow_print("\nYour adventure begins...\n")
+        welcome_text = f"\nWelcome, {player['name']}!"
+        background_text = f"Background: {player['background']}"
+        adventure_text = "\nYour adventure begins...\n"
+        
+        game_utils.slow_print(welcome_text)
+        game_utils.narrate(welcome_text, llm)
+        
+        game_utils.slow_print(background_text)
+        game_utils.narrate(background_text, llm)
+        
+        game_utils.slow_print(adventure_text)
+        game_utils.narrate("Your adventure begins...", llm)
 
 if __name__ == "__main__":
     game = Game()

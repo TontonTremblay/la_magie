@@ -1,2 +1,8 @@
 llmlite==0.1.0
-openai>=1.0.0 
+openai>=1.10.0
+# Audio playback dependencies (install the one for your OS)
+# For Windows: No additional dependencies needed
+# For macOS: No additional dependencies needed
+# For Linux: Install one of these
+# mpg123
+# mpg321 

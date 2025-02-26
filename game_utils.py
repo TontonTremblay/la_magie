@@ -7,6 +7,10 @@ import time
 import random
 from typing import List, Dict, Any, Optional
 
+# Global configuration
+NARRATION_ENABLED = True
+NARRATION_VOICE = "onyx"  # Options: alloy, echo, fable, onyx, nova, shimmer
+
 def clear_screen():
     """Clear the terminal screen"""
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -17,6 +21,11 @@ def slow_print(text: str, delay: float = 0.03):
         print(char, end='', flush=True)
         time.sleep(delay)
     print()
+
+def narrate(text: str, llm=None):
+    """Narrate text using text-to-speech if enabled"""
+    if NARRATION_ENABLED and llm:
+        llm.text_to_speech(text, voice=NARRATION_VOICE)
 
 def format_list(items: List[str]) -> str:
     """Format a list of items as a readable string"""
@@ -58,6 +67,21 @@ def get_game_banner() -> str:
     ║                                                           ║
     ╚═══════════════════════════════════════════════════════════╝
     """
+
+def toggle_narration():
+    """Toggle narration on/off"""
+    global NARRATION_ENABLED
+    NARRATION_ENABLED = not NARRATION_ENABLED
+    return NARRATION_ENABLED
+
+def set_narration_voice(voice: str):
+    """Set the narration voice"""
+    global NARRATION_VOICE
+    valid_voices = ["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+    if voice.lower() in valid_voices:
+        NARRATION_VOICE = voice.lower()
+        return True
+    return False
 
 def save_game(game_state: Dict[str, Any], filename: str = "savegame.json") -> bool:
     """Save the current game state to a file"""
