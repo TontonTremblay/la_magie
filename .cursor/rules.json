@@ -3,11 +3,22 @@
     {
       "name": "Auto Git Commit After Composer Changes",
       "description": "Automatically commits changes to git after accepting changes from the composer",
-      "events": ["after_composer_accept"],
+      "events": ["after_composer_accept", "after_composer_apply"],
       "actions": [
         {
           "type": "run_command",
-          "command": "git add . && git commit -m \"Auto-commit: Changes accepted from Cursor composer at $(date)\""
+          "command": "cd \"$CURSOR_WORKSPACE\" && git add . && git commit -m \"Auto-commit: Changes from Cursor composer\""
+        }
+      ]
+    },
+    {
+      "name": "Auto Git Commit After File Save",
+      "description": "Automatically commits changes to git after saving a file",
+      "events": ["after_file_save"],
+      "actions": [
+        {
+          "type": "run_command",
+          "command": "cd \"$CURSOR_WORKSPACE\" && git add \"$CURSOR_FILE\" && git commit -m \"Auto-commit: Saved changes to $CURSOR_FILE\""
         }
       ]
     }
