@@ -8,8 +8,8 @@ import random
 from typing import List, Dict, Any, Optional
 
 # Global configuration
-NARRATION_ENABLED = True
-NARRATION_VOICE = "onyx"  # Options: alloy, echo, fable, onyx, nova, shimmer
+NARRATION_ENABLED = False
+NARRATION_VOICE = "nova"  # Options: alloy, echo, fable, onyx, nova, shimmer
 
 def clear_screen():
     """Clear the terminal screen"""
@@ -46,27 +46,314 @@ def chance(probability: float) -> bool:
     """Return True with the given probability (0.0 to 1.0)"""
     return random.random() < probability
 
-def get_game_banner() -> str:
-    """Return ASCII art banner for the game"""
-    return """
-    ╔═══════════════════════════════════════════════════════════╗
-    ║                                                           ║
-    ║   ██████╗ ██╗   ██╗███╗   ██╗ ██████╗ ███████╗ ██████╗   ║
-    ║   ██╔══██╗██║   ██║████╗  ██║██╔════╝ ██╔════╝██╔═══██╗  ║
-    ║   ██║  ██║██║   ██║██╔██╗ ██║██║  ███╗█████╗  ██║   ██║  ║
-    ║   ██║  ██║██║   ██║██║╚██╗██║██║   ██║██╔══╝  ██║   ██║  ║
-    ║   ██████╔╝╚██████╔╝██║ ╚████║╚██████╔╝███████╗╚██████╔╝  ║
-    ║   ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝ ╚═════╝ ╚══════╝ ╚═════╝   ║
-    ║                                                           ║
-    ║   ███████╗██╗  ██╗██████╗ ██╗      ██████╗ ██████╗ ███████╗ ██████╗   ║
-    ║   ██╔════╝╚██╗██╔╝██╔══██╗██║     ██╔═══██╗██╔══██╗██╔════╝██╔══██╗  ║
-    ║   █████╗   ╚███╔╝ ██████╔╝██║     ██║   ██║██████╔╝█████╗  ██████╔╝  ║
-    ║   ██╔══╝   ██╔██╗ ██╔═══╝ ██║     ██║   ██║██╔══██╗██╔══╝  ██╔══██╗  ║
-    ║   ███████╗██╔╝ ██╗██║     ███████╗╚██████╔╝██║  ██║███████╗██║  ██║  ║
-    ║   ╚══════╝╚═╝  ╚═╝╚═╝     ╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝  ║
-    ║                                                           ║
-    ╚═══════════════════════════════════════════════════════════╝
+def get_game_banner(title1: str = "DUNGEON", title2: str = "EXPLORER") -> str:
     """
+    Generate ASCII art banner for the game with customizable title text.
+    
+    Args:
+        title1: First line of the title (default: "DUNGEON")
+        title2: Second line of the title (default: "EXPLORER")
+    
+    Returns:
+        A string containing the ASCII art banner
+    """
+    # Create the border
+    border_top = "    ╔" + "═" * 59 + "╗"
+    border_bottom = "    ╚" + "═" * 59 + "╝"
+    empty_line = "    ║" + " " * 59 + "║"
+    
+    # Generate the banner
+    banner = [
+        "",
+        border_top,
+        empty_line
+    ]
+    
+    # Add the first title line (if provided)
+    if title1:
+        title1_centered = title1.center(59)
+        banner.append(f"    ║   {title1_centered}   ║")
+    
+    # Add spacing between titles
+    banner.append(empty_line)
+    
+    # Add the second title line (if provided)
+    if title2:
+        title2_centered = title2.center(59)
+        banner.append(f"    ║   {title2_centered}   ║")
+    
+    # Complete the banner
+    banner.extend([
+        empty_line,
+        border_bottom,
+        ""
+    ])
+    
+    return "\n".join(banner)
+
+def get_fancy_game_banner(title1: str = "DUNGEON", title2: str = "EXPLORER") -> str:
+    """
+    Generate a fancy ASCII art banner for the game with customizable title text.
+    
+    Args:
+        title1: First line of the title (default: "DUNGEON")
+        title2: Second line of the title (default: "EXPLORER")
+    
+    Returns:
+        A string containing the fancy ASCII art banner
+    """
+    # ASCII art letters for each character (simplified version)
+    ascii_letters = {
+        'A': [
+            "  █████  ",
+            " ██   ██ ",
+            "███████  ",
+            "██   ██ ",
+            "██   ██ "
+        ],
+        'B': [
+            "██████  ",
+            "██   ██ ",
+            "██████  ",
+            "██   ██ ",
+            "██████  "
+        ],
+        'C': [
+            " ██████ ",
+            "██      ",
+            "██      ",
+            "██      ",
+            " ██████ "
+        ],
+        'D': [
+            "██████  ",
+            "██   ██ ",
+            "██   ██ ",
+            "██   ██ ",
+            "██████  "
+        ],
+        'E': [
+            "███████ ",
+            "██      ",
+            "█████   ",
+            "██      ",
+            "███████ "
+        ],
+        'F': [
+            "███████ ",
+            "██      ",
+            "█████   ",
+            "██      ",
+            "██      "
+        ],
+        'G': [
+            " ██████  ",
+            "██       ",
+            "██   ███ ",
+            "██    ██ ",
+            " ██████  "
+        ],
+        'H': [
+            "██   ██ ",
+            "██   ██ ",
+            "███████ ",
+            "██   ██ ",
+            "██   ██ "
+        ],
+        'I': [
+            "███     ",
+            " ██     ",
+            " ██     ",
+            " ██     ",
+            "███     "
+        ],
+        'J': [
+            "     ██ ",
+            "     ██ ",
+            "     ██ ",
+            "██   ██ ",
+            " █████  "
+        ],
+        'K': [
+            "██   ██ ",
+            "██  ██  ",
+            "█████   ",
+            "██  ██  ",
+            "██   ██ "
+        ],
+        'L': [
+            "██      ",
+            "██      ",
+            "██      ",
+            "██      ",
+            "███████ "
+        ],
+        'M': [
+            "███    ███ ",
+            "████  ████ ",
+            "██ ████ ██ ",
+            "██  ██  ██ ",
+            "██      ██ "
+        ],
+        'N': [
+            "███    ██ ",
+            "████   ██ ",
+            "██ ██  ██ ",
+            "██  ██ ██ ",
+            "██   ████ "
+        ],
+        'O': [
+            " ██████  ",
+            "██    ██ ",
+            "██    ██ ",
+            "██    ██ ",
+            " ██████  "
+        ],
+        'P': [
+            "██████  ",
+            "██   ██ ",
+            "██████  ",
+            "██      ",
+            "██      "
+        ],
+        'Q': [
+            " ██████  ",
+            "██    ██ ",
+            "██    ██ ",
+            "██ ▄▄ ██ ",
+            " ██████  "
+        ],
+        'R': [
+            "██████  ",
+            "██   ██ ",
+            "██████  ",
+            "██   ██ ",
+            "██   ██ "
+        ],
+        'S': [
+            " ██████  ",
+            "██       ",
+            " ██████  ",
+            "      ██ ",
+            " ██████  "
+        ],
+        'T': [
+            "████████ ",
+            "   ██    ",
+            "   ██    ",
+            "   ██    ",
+            "   ██    "
+        ],
+        'U': [
+            "██    ██ ",
+            "██    ██ ",
+            "██    ██ ",
+            "██    ██ ",
+            " ██████  "
+        ],
+        'V': [
+            "██    ██ ",
+            "██    ██ ",
+            "██    ██ ",
+            " ██  ██  ",
+            "  ████   "
+        ],
+        'W': [
+            "██     ██ ",
+            "██     ██ ",
+            "██  █  ██ ",
+            "██ ███ ██ ",
+            " ███ ███  "
+        ],
+        'X': [
+            "██   ██ ",
+            " ██ ██  ",
+            "  ███   ",
+            " ██ ██  ",
+            "██   ██ "
+        ],
+        'Y': [
+            "██    ██ ",
+            " ██  ██  ",
+            "  ████   ",
+            "   ██    ",
+            "   ██    "
+        ],
+        'Z': [
+            "███████ ",
+            "    ██  ",
+            "   ██   ",
+            "  ██    ",
+            "███████ "
+        ],
+        ' ': [
+            "        ",
+            "        ",
+            "        ",
+            "        ",
+            "        "
+        ]
+    }
+    
+    # Create the border
+    border_top = "    ╔" + "═" * 59 + "╗"
+    border_bottom = "    ╚" + "═" * 59 + "╝"
+    empty_line = "    ║" + " " * 59 + "║"
+    
+    # Generate the banner
+    banner = [
+        "",
+        border_top,
+        empty_line
+    ]
+    
+    # Convert titles to uppercase
+    title1 = title1.upper()
+    title2 = title2.upper()
+    
+    # Generate ASCII art for the first title
+    if title1:
+        title1_ascii = ["", "", "", "", ""]
+        for char in title1:
+            if char in ascii_letters:
+                for i in range(5):
+                    title1_ascii[i] += ascii_letters[char][i]
+            else:
+                for i in range(5):
+                    title1_ascii[i] += "        "
+        
+        # Center and add the first title
+        for line in title1_ascii:
+            centered_line = line.center(59)
+            banner.append(f"    ║{centered_line}║")
+    
+    # Add spacing between titles
+    banner.append(empty_line)
+    
+    # Generate ASCII art for the second title
+    if title2:
+        title2_ascii = ["", "", "", "", ""]
+        for char in title2:
+            if char in ascii_letters:
+                for i in range(5):
+                    title2_ascii[i] += ascii_letters[char][i]
+            else:
+                for i in range(5):
+                    title2_ascii[i] += "        "
+        
+        # Center and add the second title
+        for line in title2_ascii:
+            centered_line = line.center(59)
+            banner.append(f"    ║{centered_line}║")
+    
+    # Complete the banner
+    banner.extend([
+        empty_line,
+        border_bottom,
+        ""
+    ])
+    
+    return "\n".join(banner)
 
 def toggle_narration():
     """Toggle narration on/off"""

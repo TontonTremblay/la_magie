@@ -20,6 +20,8 @@ class Game:
             "current_location": "",
             "inventory": [],
             "characters_met": [],
+            "current_goal": "",
+            "completed_goals": [],
             "history": []
         }
     
@@ -36,15 +38,23 @@ class Game:
         3. possible_solutions: At least 3 different ways to resolve the conflict
         4. characters: At least 3 characters with their descriptions, motivations, and how they can help or hinder the player
         5. failure_cases: At least 5 ways the player might fail
+        6. main_goal: A clear, specific main goal for the player to accomplish
+        7. initial_goal: The first immediate goal the player should focus on to start their journey
         """
         
         story_context = llm.generate_json(prompt)
         if story_context:
             self.game_state["story_context"] = story_context
+            # Set the initial goal for the player
+            if "initial_goal" in story_context:
+                self.game_state["current_goal"] = story_context["initial_goal"]
+            else:
+                self.game_state["current_goal"] = "Explore the area and discover your purpose"
             game_utils.slow_print("Game context generated successfully!")
         else:
             game_utils.slow_print("Error generating game context. Using default game context.")
             self.game_state["story_context"] = self._get_default_game_context()
+            self.game_state["current_goal"] = "Find the source of the monsters and deal with the artifact"
     
     def _get_default_game_context(self) -> Dict[str, Any]:
         """Fallback game context if LLM fails"""
@@ -79,7 +89,9 @@ class Game:
             "failure_cases": [
                 "Getting trapped in the temple forever",
                 "Releasing an ancient evil by misusing the artifact"
-            ]
+            ],
+            "main_goal": "Find and deal with the cursed artifact to stop the monster invasion",
+            "initial_goal": "Explore the temple entrance and find clues about the artifact's location"
         }
     
     def create_player(self):
@@ -134,6 +146,8 @@ class Game:
         Generate exactly 4 possible actions the player can take right now.
         These should be logical given the current location, inventory, and story context.
         
+        IMPORTANT: At least 2 of these actions should help the player progress toward their current goal: "{self.game_state.get('current_goal', '')}"
+        
         Format your response with a single field "choices" containing an array of 4 strings.
         Each string should be a brief action description (5-10 words).
         """
@@ -166,6 +180,8 @@ class Game:
         3. Determining if any new items were found or lost
         4. Determining if any characters were encountered
         5. Updating the current location if the player moved
+        6. Evaluating if the current goal has been completed
+        7. Providing a new goal if the current one is completed
         
         Format your response with these fields:
         - action_result: A paragraph describing what happens
@@ -175,6 +191,8 @@ class Game:
         - items_lost (optional): List of items the player lost
         - character_encountered (optional): Name of any character encountered
         - character_interaction (optional): Description of the interaction
+        - goal_completed (optional): Set to true if the current goal was completed
+        - new_goal (optional): A new goal for the player if the current one was completed
         
         if a character appears, please make sure it was caused by an action. 
         Make sure all action makes the narrative move forward, make sure there are not circular interactions. 
@@ -215,6 +233,17 @@ class Game:
                     self.game_state["characters_met"].append(character)
                     game_utils.slow_print(f"You met: {character}")
             
+            # Update goal if completed
+            if "goal_completed" in action_result and action_result["goal_completed"]:
+                completed_goal = self.game_state["current_goal"]
+                if completed_goal and completed_goal not in self.game_state["completed_goals"]:
+                    self.game_state["completed_goals"].append(completed_goal)
+                    game_utils.slow_print(f"\n✅ Goal completed: {completed_goal}")
+                
+                if "new_goal" in action_result and action_result["new_goal"]:
+                    self.game_state["current_goal"] = action_result["new_goal"]
+                    game_utils.slow_print(f"\n📋 New goal: {action_result['new_goal']}")
+            
             # Display and narrate result to player
             result_text = action_result["action_result"]
             game_utils.slow_print("\n" + result_text + "\n", delay=0.02)
@@ -229,10 +258,24 @@ class Game:
     
     def display_game_status(self):
         """Display current game status to the player"""
-        print(f"\n--- {self.game_state['current_location']} ---")
+        # Get game title
+        if "custom_title" in self.game_state:
+            title1 = self.game_state["custom_title"]["title1"]
+            title2 = self.game_state["custom_title"]["title2"]
+            game_title = f"{title1} {title2}".strip()
+        else:
+            game_title = "DUNGEON EXPLORER"
+            
+        print(f"\n--- {game_title}: {self.game_state['current_location']} ---")
         location_desc = self.game_state.get("location_description", "")
         game_utils.slow_print(location_desc, delay=0.02)
         game_utils.narrate(location_desc, llm)
+        
+        # Display current goal
+        current_goal = self.game_state.get("current_goal", "")
+        if current_goal:
+            print("\n📋 Current Goal:", current_goal)
+        
         print("\nInventory:", game_utils.format_list(self.game_state["inventory"]))
     
     def save_current_game(self):
@@ -284,11 +327,125 @@ class Game:
         except ValueError:
             game_utils.slow_print("Please enter a number.")
         
+    def view_goal_history(self):
+        """Display the player's goal history"""
+        print("\n--- Goal History ---")
+        
+        # Show main goal from story context
+        story_context = self.game_state["story_context"]
+        if "main_goal" in story_context:
+            print(f"\nUltimate Mission: {story_context['main_goal']}")
+        
+        # Show completed goals
+        completed_goals = self.game_state.get("completed_goals", [])
+        if completed_goals:
+            print("\nCompleted Goals:")
+            for i, goal in enumerate(completed_goals, 1):
+                print(f"{i}. ✅ {goal}")
+        else:
+            print("\nNo goals completed yet.")
+        
+        # Show current goal
+        current_goal = self.game_state.get("current_goal", "")
+        if current_goal:
+            print(f"\nCurrent Objective: 📋 {current_goal}")
+        
+        input("\nPress Enter to continue...")
+    
+    def customize_game_title(self):
+        """Allow the player to customize the game title"""
+        print("\n--- Customize Game Title ---")
+        
+        # Show current title
+        if "custom_title" in self.game_state:
+            current_title1 = self.game_state["custom_title"]["title1"]
+            current_title2 = self.game_state["custom_title"]["title2"]
+            current_title = f"{current_title1} {current_title2}".strip()
+        else:
+            current_title = "DUNGEON EXPLORER"
+        
+        print(f"Current title: {current_title}")
+        print("\nOptions:")
+        print("1. Enter new title")
+        print("2. Reset to default (DUNGEON EXPLORER)")
+        print("0. Cancel")
+        
+        try:
+            option = int(input("\nSelect option (0-2): "))
+            
+            if option == 0:
+                game_utils.slow_print("Title customization cancelled.")
+                return
+            elif option == 2:
+                # Reset to default
+                self.game_state["custom_title"] = {
+                    "title1": "DUNGEON",
+                    "title2": "EXPLORER"
+                }
+                game_utils.slow_print("Title reset to default: DUNGEON EXPLORER")
+                
+                # Show preview
+                print("\nTitle Preview:")
+                print(game_utils.get_fancy_game_banner("DUNGEON", "EXPLORER"))
+                
+                input("\nPress Enter to continue...")
+                return
+            elif option != 1:
+                game_utils.slow_print("Invalid option. Title customization cancelled.")
+                return
+        except ValueError:
+            game_utils.slow_print("Invalid input. Title customization cancelled.")
+            return
+        
+        # Option 1: Enter new title
+        print("\nEnter new title (two words recommended, leave blank to cancel):")
+        new_title = input("> ").strip()
+        if not new_title:
+            game_utils.slow_print("Title customization cancelled.")
+            return
+        
+        # Split the title into two parts if possible
+        title_parts = new_title.split(maxsplit=1)
+        if len(title_parts) == 1:
+            title1 = title_parts[0]
+            title2 = ""
+        else:
+            title1, title2 = title_parts
+        
+        # Show preview
+        print("\nTitle Preview:")
+        print(game_utils.get_fancy_game_banner(title1, title2))
+        
+        # Ask for confirmation
+        confirm = input("Use this title? (y/n): ").lower()
+        if confirm.startswith('y'):
+            # Store the custom title in game state
+            self.game_state["custom_title"] = {
+                "title1": title1,
+                "title2": title2
+            }
+            game_utils.slow_print("Game title updated!")
+        else:
+            game_utils.slow_print("Title customization cancelled.")
+        
+        input("\nPress Enter to continue...")
+    
     def run_game(self):
         """Main game loop"""
         game_utils.clear_screen()
-        print(game_utils.get_game_banner())
-        game_utils.slow_print("\nWelcome to Dungeon Explorer!\n", delay=0.05)
+        
+        # Use the fancy banner with custom title if available
+        if "custom_title" in self.game_state:
+            title1 = self.game_state["custom_title"]["title1"]
+            title2 = self.game_state["custom_title"]["title2"]
+            print(game_utils.get_fancy_game_banner(title1, title2))
+            game_title = f"{title1} {title2}".strip()
+        else:
+            # Use default title
+            print(game_utils.get_fancy_game_banner())
+            game_title = "Dungeon Explorer"
+        
+        game_utils.slow_print(f"\nWelcome to {game_title}!\n", delay=0.05)
         
         # Ask to load saved game
         if os.path.exists("savegame.json"):
@@ -319,11 +476,13 @@ class Game:
             print("5. Save game")
             print("6. Toggle narration")
             print("7. Change narration voice")
+            print("8. View goal history")
+            print("9. Customize game title")
             print("0. Quit game")
             
             # Get player input
             try:
-                choice_num = int(input("\nEnter your choice (0-7): "))
+                choice_num = int(input("\nEnter your choice (0-9): "))
                 if choice_num == 0:
                     game_utils.slow_print("\nThanks for playing!")
                     break
@@ -333,6 +492,10 @@ class Game:
                     self.toggle_narration()
                 elif choice_num == 7:
                     self.change_narration_voice()
+                elif choice_num == 8:
+                    self.view_goal_history()
+                elif choice_num == 9:
+                    self.customize_game_title()
                 elif 1 <= choice_num <= len(choices):
                     self.process_player_action(choices[choice_num-1])
                 else:
@@ -346,6 +509,13 @@ class Game:
         self.initialize_game()
         self.create_player()
         
+        # Ensure default title is set if not customized
+        if "custom_title" not in self.game_state:
+            self.game_state["custom_title"] = {
+                "title1": "DUNGEON",
+                "title2": "EXPLORER"
+            }
+        
         # Introduction
         player = self.game_state["player"]
         welcome_text = f"\nWelcome, {player['name']}!"
@@ -357,6 +527,18 @@ class Game:
         
         game_utils.slow_print(background_text)
         game_utils.narrate(background_text, llm)
+        
+        # Introduce the main goal and initial goal
+        story_context = self.game_state["story_context"]
+        if "main_goal" in story_context:
+            main_goal_text = f"\nYour ultimate mission: {story_context['main_goal']}"
+            game_utils.slow_print(main_goal_text)
+            game_utils.narrate(main_goal_text, llm)
+        
+        if "current_goal" in self.game_state and self.game_state["current_goal"]:
+            initial_goal_text = f"\nYour current objective: {self.game_state['current_goal']}"
+            game_utils.slow_print(initial_goal_text)
+            game_utils.narrate(initial_goal_text, llm)
         
         game_utils.slow_print(adventure_text)
         game_utils.narrate("Your adventure begins...", llm)

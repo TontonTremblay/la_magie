@@ -7,7 +7,7 @@
       "actions": [
         {
           "type": "run_command",
-          "command": "git add . && git commit -m \"Auto-commit: Changes from Cursor composer\""
+          "command": "git add . && git commit -m \"Auto-commit: Changes accepted from Cursor composer at $(date)\""
         }
       ]
     }
