@@ -1,0 +1,15 @@
+{
+  "rules": [
+    {
+      "name": "Auto Git Commit After Composer Changes",
+      "description": "Automatically commits changes to git after accepting changes from the composer",
+      "events": ["after_composer_accept"],
+      "actions": [
+        {
+          "type": "run_command",
+          "command": "git add . && git commit -m \"Auto-commit: Changes from Cursor composer\""
+        }
+      ]
+    }
+  ]
+} 
